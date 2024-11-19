@@ -896,7 +896,7 @@ void main_setup() { // Mercedes F1 W14 car; required extensions in defines.hpp: 
 	
 	std::cout << "starting setup.cpp" << std::endl;
 	const uint3 lbm_N = resolution(float3(1.0f, 2.0f, 0.5f), 2000u*1u); // input: simulation box aspect ratio and VRAM occupation in MB, output: grid resolution
-	const float lbm_u = 0.075f/1.f; // velocity in lbm units
+	const float lbm_u = 0.075f/.5f; // velocity in lbm units
 	const float lbm_length = 0.8f*(float)lbm_N.y; // length of car in voxel units
 	const float si_T = 0.25f/5.f; //duration of simulation, in seconds?
 	const float si_u = 100.0f/3.6f; //speed in real units, 100 km/h in m/s
@@ -941,7 +941,7 @@ void main_setup() { // Mercedes F1 W14 car; required extensions in defines.hpp: 
 
 #if defined(GRAPHICS) && !defined(INTERACTIVE_GRAPHICS)
 	const string path = get_exe_path() + "export/"; // the folder we will write to
-	write_file(path+"forces.dat", "        t,        x,        y,        z,\n"); // Open a file for writing stats
+	write_file(path+"forces.dat", "        t;        x;        y;        z;\n"); // Open a file for writing stats
 
 	std::cout << "running graphics" << std::endl;
 	lbm.run(0u, lbm_T); // initialize simulation
@@ -964,12 +964,12 @@ void main_setup() { // Mercedes F1 W14 car; required extensions in defines.hpp: 
 		lbm.F.read_from_device();
 		const float3 lbm_force = lbm.calculate_force_on_object(TYPE_S | TYPE_Y);
 		//const float Cd = units.si_F(lbm_force.y)/(0.5f*si_rho*sq(si_u)*si_A); // expect Cd to be too large by a factor 1.3-2.0x; need wall model
-		float3 real_force = float3(units.F(lbm_force.x), units.F(lbm_force.y), units.F(lbm_force.z));
+		float3 real_force = float3(units.si_F(lbm_force.x), units.si_F(lbm_force.y), units.si_F(lbm_force.z));
 
 		//log stats to file
 		string counter = "00000000" + to_string(lbm.get_t());
 		counter = substring(counter, length(counter) - 9u, 9u);
-		write_line(path+"forces.dat", counter +",  "+to_string(real_force.x)+",  "+to_string(real_force.y)+",  "+to_string(real_force.z)+",\n");
+		write_line(path+"forces.dat", counter +";  "+to_string(real_force.x)+";  "+to_string(real_force.y)+";  "+to_string(real_force.z)+";\n");
 		
 		lbm.run(1u, lbm_T);
 	}
