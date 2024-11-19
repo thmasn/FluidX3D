@@ -895,14 +895,14 @@ void main_setup() { // Mercedes F1 W14 car; required extensions in defines.hpp: 
 	// ################################################################## define simulation box size, viscosity and volume force ###################################################################
 	
 	std::cout << "starting setup.cpp" << std::endl;
-	const uint3 lbm_N = resolution(float3(1.0f, 2.0f, 0.5f), 2000u*5u); // input: simulation box aspect ratio and VRAM occupation in MB, output: grid resolution
-	const float lbm_u = 0.075f/2.f; //dimensionless characteritic velocity
-	const float lbm_length = 0.8f*(float)lbm_N.y; // Defines characteristic physical length in lattice units
-	const float si_T = 0.25f; // real-world time duration that corresponds to the simulation step.
-	const float si_u = 100.0f/3.6f; // 100 km/h in m/s
-	const float si_length=5.5f, si_width=2.0f; // real-world length and width of the simulation domain 
-	const float si_nu=1.48E-5f, si_rho=1.225f; // Define the kinematic viscosity and density of the fluid (SI units)
-	units.set_m_kg_s(lbm_length, lbm_u, 1.0f, si_length, si_u, si_rho); // set up unit conversion
+	const uint3 lbm_N = resolution(float3(1.0f, 2.0f, 0.5f), 2000u*1u); // input: simulation box aspect ratio and VRAM occupation in MB, output: grid resolution
+	const float lbm_u = 0.075f/1.f; // velocity in lbm units
+	const float lbm_length = 0.8f*(float)lbm_N.y; // length of car in voxel units
+	const float si_T = 0.25f/5.f; //duration of simulation, in seconds?
+	const float si_u = 100.0f/3.6f; //speed in real units, 100 km/h in m/s
+	const float si_length=5.5f, si_width=2.0f; // real-world length and width of the car
+	const float si_nu=1.48E-5f, si_rho=1.225f; // air viscosity and air density
+	units.set_m_kg_s(lbm_length, lbm_u, 1.0f, si_length, si_u, si_rho); //set up converter between lbm units and si units
 	const float lbm_nu = units.nu(si_nu); // Compute the kinematic viscosity in LBM units
 	const ulong lbm_T = units.t(si_T); // Compute the simulation duration in LBM timesteps
 	print_info("Re = "+to_string(to_uint(units.si_Re(si_width, si_u, si_nu))));
@@ -923,37 +923,54 @@ void main_setup() { // Mercedes F1 W14 car; required extensions in defines.hpp: 
 	front_wheels->set_center(front_wheels->get_bounding_box_center());
 	back_wheels->set_center(back_wheels->get_bounding_box_center());
 	const float lbm_radius=0.5f*back_wheels->get_min_size(), omega=lbm_u/lbm_radius;
-	lbm.voxelize_mesh_on_device(body);
-	lbm.voxelize_mesh_on_device(front_wheels, TYPE_S, front_wheels->get_center(), float3(0.0f), float3(omega, 0.0f, 0.0f)); // make wheels rotating
-	lbm.voxelize_mesh_on_device(back_wheels, TYPE_S, back_wheels->get_center(), float3(0.0f), float3(omega, 0.0f, 0.0f)); // make wheels rotating
+	lbm.voxelize_mesh_on_device(body, TYPE_S | TYPE_Y); //things tagged s and y will be measured for forces
+	lbm.voxelize_mesh_on_device(front_wheels, TYPE_S | TYPE_Y, front_wheels->get_center(), float3(0.0f), float3(omega, 0.0f, 0.0f)); // make wheels rotating
+	lbm.voxelize_mesh_on_device(back_wheels, TYPE_S | TYPE_Y, back_wheels->get_center(), float3(0.0f), float3(omega, 0.0f, 0.0f)); // make wheels rotating
 	const uint Nx=lbm.get_Nx(), Ny=lbm.get_Ny(), Nz=lbm.get_Nz(); parallel_for(lbm.get_N(), [&](ulong n) { uint x=0u, y=0u, z=0u; lbm.coordinates(n, x, y, z);
-		if(lbm.flags[n]!=TYPE_S) lbm.u.y[n] = lbm_u;
-		if(x==0u||x==Nx-1u||y==0u||y==Ny-1u||z==Nz-1u) lbm.flags[n] = TYPE_E;
-		if(z==0u) lbm.flags[n] = TYPE_S;
+		if (lbm.flags[n] != (TYPE_S | TYPE_Y)) lbm.u.y[n] = lbm_u; //set velocity on all non-solids to speed
+		if(x==0u||x==Nx-1u||y==0u||y==Ny-1u||z==Nz-1u) lbm.flags[n] = TYPE_E; //set equilibrium bounds on left, right, front, back, top
+		if(z==0u) lbm.flags[n] = TYPE_S; //set solid bound on bottom
 	}); // ####################################################################### run simulation, export images and data ##########################################################################
 	
 	std::cout << "finished setup" << std::endl;
-#if defined(GRAPHICS) && !defined(INTERACTIVE_GRAPHICS)
-	std::cout << "running graphics" << std::endl;
-	std::cout << get_exe_path() << std::endl;
+
 	//lbm.graphics.visualization_modes = VIS_FLAG_SURFACE|VIS_Q_CRITERION;
-	lbm.graphics.visualization_modes = VIS_FLAG_SURFACE|VIS_STREAMLINES;
+	lbm.graphics.visualization_modes = VIS_FLAG_SURFACE | VIS_STREAMLINES;
 	//lbm.graphics.visualization_modes = VIS_FIELD;
 	lbm.graphics.slice_mode = 1;
+
+#if defined(GRAPHICS) && !defined(INTERACTIVE_GRAPHICS)
+	const string path = get_exe_path() + "export/"; // the folder we will write to
+	write_file(path+"forces.dat", "        t,        x,        y,        z,\n"); // Open a file for writing stats
+
+	std::cout << "running graphics" << std::endl;
 	lbm.run(0u, lbm_T); // initialize simulation
 	while(lbm.get_t()<=lbm_T) { // main simulation loop
-		if(lbm.graphics.next_frame(lbm_T, 30.0f)) {
+		if(lbm.graphics.next_frame(lbm_T, si_T*100.f)) { // makes video of 25seconds @60fps -> 100x slow motion
 			lbm.graphics.set_camera_free(float3(0.779346f*(float)Nx, -0.315650f*(float)Ny, 0.329444f*(float)Nz), -27.0f, 19.0f, 100.0f);
-			lbm.graphics.write_frame(get_exe_path()+"export/a/", "image", ".png", false);
+			lbm.graphics.write_frame(path+"a/", "image", ".png", false);
 			//lbm.graphics.set_camera_free(float3(0.556877f*(float)Nx, 0.228191f*(float)Ny, 1.159613f*(float)Nz), 19.0f, 53.0f, 100.0f);
-			//lbm.graphics.write_frame(get_exe_path()+"export/b/");
+			//lbm.graphics.write_frame(path+"b/");
 			//lbm.graphics.set_camera_free(float3(0.220650f*(float)Nx, -0.589529f*(float)Ny, 0.085407f*(float)Nz), -72.0f, 16.0f, 86.0f);
-			//lbm.graphics.write_frame(get_exe_path()+"export/c/");
+			//lbm.graphics.write_frame(path +"c/");
 			const float progress = (float)lbm.get_t()/(float)lbm_T;
 			const float A = 75.0f, B = -160.0f;
 			//lbm.graphics.set_camera_centered(A+progress*(B-A), -5.0f, 100.0f, 1.648721f);
 			//lbm.graphics.write_frame(get_exe_path()+"export/d/");
 		}
+		
+		//calculate forces
+		lbm.calculate_force_on_boundaries();
+		lbm.F.read_from_device();
+		const float3 lbm_force = lbm.calculate_force_on_object(TYPE_S | TYPE_Y);
+		//const float Cd = units.si_F(lbm_force.y)/(0.5f*si_rho*sq(si_u)*si_A); // expect Cd to be too large by a factor 1.3-2.0x; need wall model
+		float3 real_force = float3(units.F(lbm_force.x), units.F(lbm_force.y), units.F(lbm_force.z));
+
+		//log stats to file
+		string counter = "00000000" + to_string(lbm.get_t());
+		counter = substring(counter, length(counter) - 9u, 9u);
+		write_line(path+"forces.dat", counter +",  "+to_string(real_force.x)+",  "+to_string(real_force.y)+",  "+to_string(real_force.z)+",\n");
+		
 		lbm.run(1u, lbm_T);
 	}
 #else // GRAPHICS && !INTERACTIVE_GRAPHICS
