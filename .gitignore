@@ -1,5 +1,7 @@
 bin/
+!bin/export/analyse/analyse.py
 temp/
 stl/
 .vs/
 FluidX3D.vcxproj.user
+.DS_Store
