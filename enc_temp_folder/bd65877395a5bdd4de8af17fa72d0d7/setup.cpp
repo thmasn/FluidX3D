@@ -896,7 +896,7 @@ void main_setup() { // Mercedes F1 W14 car; required extensions in defines.hpp: 
 	
 	std::cout << "starting setup.cpp" << std::endl;
 	const uint3 lbm_N = resolution(float3(1.0f, 2.0f, 0.5f), 3000u*1u); // input: simulation box aspect ratio and VRAM occupation in MB, output: grid resolution
-	const float lbm_u = 0.075f/1.f; // velocity in lbm units
+	const float lbm_u = 0.075f/4.f; // velocity in lbm units
 	const float lbm_length = 0.8f*(float)lbm_N.y; // length of car in voxel units
 	const float si_T = 0.25f/1.f; //duration of simulation, in seconds?
 	const float si_u = 100.0f/3.6f; //speed in real units, 100 km/h in m/s
