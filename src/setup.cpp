@@ -941,7 +941,7 @@ void main_setup() { // Mercedes F1 W14 car; required extensions in defines.hpp: 
 
 #if defined(GRAPHICS) && !defined(INTERACTIVE_GRAPHICS)
 	const string path = get_exe_path() + "export/"; // the folder we will write to
-	write_file(path+"forces.dat", "        t;        x;        y;        z;\n"); // Open a file for writing stats
+	write_file(path+"forces.dat", "        t,        x,        y,        z,\n"); // Open a file for writing stats
 
 	std::cout << "running graphics" << std::endl;
 	lbm.run(0u, lbm_T); // initialize simulation
@@ -969,7 +969,7 @@ void main_setup() { // Mercedes F1 W14 car; required extensions in defines.hpp: 
 		//log stats to file
 		string counter = "00000000" + to_string(lbm.get_t());
 		counter = substring(counter, length(counter) - 9u, 9u);
-		write_line(path+"forces.dat", counter +";  "+to_string(real_force.x)+";  "+to_string(real_force.y)+";  "+to_string(real_force.z)+";\n");
+		write_line(path+"forces.dat", counter +",  "+to_string(real_force.x)+",  "+to_string(real_force.y)+",  "+to_string(real_force.z)+",\n");
 		
 		lbm.run(1u, lbm_T);
 	}

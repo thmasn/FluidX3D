@@ -17,6 +17,11 @@ file_path = "1xforces3.dat"
 scaleFacX = 2
 file_path = "2xforces3.dat"
 scaleFacX = 4
+file_path = "./bin/export/doubTimeStep3/forces.dat"
+file_path = "./bin/export/origTimeStep3/forces.dat"
+file_path = "./bin/export/halfTimeStep3/forces.dat"
+file_path = "./bin/export/qrtTimeStep3/forces.dat"
+scaleFacX = 1
 
 # Colors for each column
 colors = ["black", "red", "green", "blue", "orange", "purple"]
@@ -58,7 +63,7 @@ for column in data:
     mapped_data.append(mapped_column)
 
 # Prepare for plotting
-scaleFacY = 20
+scaleFacY = 10
 width = len(data[0])*scaleFacX
 height = 200*scaleFacY
 fig, ax = plt.subplots(figsize=(width / 100, height / 100), dpi=100)
