@@ -19,12 +19,12 @@ scaleFacX = 2
 file_path = "2xforces3.dat"
 scaleFacX = 4
 file_path = "./bin/export/halfTimeStep3/forces.dat"
-file_path = "./bin/export/doubTimeStep3/forces.dat"
 file_path = "./bin/export/origTimeStep3/forces.dat"
+file_path = "./bin/export/doubTimeStep3/forces.dat"
 scaleFacX = 1
 
 # Colors for each column
-colors = [(0,0,0), (170,0,0), (0,128,0), (0,0,170), (128,128,0), (0,128,128), (128,0,128)]
+colors = [(0,0,0), (200,0,0), (0,128,0), (0,0,255), (128,128,0), (0,128,128), (128,0,128)]
 
 # Read data from the file
 data = []
@@ -42,8 +42,8 @@ data = np.array(data).T
 
 # Mapping values from 0-40000 to 0-200
 def map_value(value):
-    min_val = -20000
-    max_val = 20000
+    min_val = -5000
+    max_val = 5000
     new_min = 0
     new_max = 200
     return np.interp(value, [min_val, max_val], [new_min, new_max])
@@ -63,7 +63,7 @@ for column in data:
     mapped_data.append(mapped_column)
 
 # Prepare for plotting
-scaleFacY = 10 #10
+scaleFacY = 4 #10
 width = len(data[0])*scaleFacX
 height = 200*scaleFacY
 background_color = (0, 0, 0)  # Black background
@@ -95,14 +95,17 @@ def draw_line(xy, fill, lineWidth = 1):
         else:
             pixels[interp_x, interp_y] = add_colors(pixels[interp_x, interp_y], fill)
 
-def drawHorizontalLine (y):
-    draw_line([(0, map_value(y)*scaleFacY), (width - 1, map_value(y)*scaleFacY)], fill=(64, 64, 64))#, width=1
+def drawHorizontalLine (y, color):
+    draw_line([(0, map_value(y)*scaleFacY), (width - 1, map_value(y)*scaleFacY)], fill=color)#, width=1
 
 # Add a horizontal white line in the middle of the image
-drawHorizontalLine(0)
-lines = [1, 10, 100, 1000, 10000, -1, -10, -100, -1000, -10000]
-for line in lines:
-    drawHorizontalLine(line)
+drawHorizontalLine(0, (128, 128, 128))
+#lines = [1, 10, 100, 1000, 10000, -1, -10, -100, -1000, -10000]
+#for line in lines:
+#    drawHorizontalLine(line, (64, 64, 64))
+for x in range(-9, 10):
+    line = x *1000
+    drawHorizontalLine(line, (32, 32, 32))
 
 # Draw the graph
 for col_idx, column_data in enumerate(mapped_data):
