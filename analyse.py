@@ -1,6 +1,7 @@
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image, ImageDraw
 
 # File path to the .dat file
 file_path = "2xforces.dat"
@@ -20,7 +21,7 @@ scaleFacX = 4
 file_path = "./bin/export/doubTimeStep3/forces.dat"
 file_path = "./bin/export/origTimeStep3/forces.dat"
 file_path = "./bin/export/halfTimeStep3/forces.dat"
-file_path = "./bin/export/qrtTimeStep3/forces.dat"
+file_path = "./bin/export/origTimeStep3/forces.dat"
 scaleFacX = 1
 
 # Colors for each column
@@ -66,31 +67,31 @@ for column in data:
 scaleFacY = 10
 width = len(data[0])*scaleFacX
 height = 200*scaleFacY
-fig, ax = plt.subplots(figsize=(width / 100, height / 100), dpi=100)
+background_color = (0, 0, 0)  # Black background
 
-# Set background color to black
-fig.patch.set_facecolor('black')
-ax.set_facecolor('black')
+# Create an image
+image = Image.new("RGB", (width, height), background_color)
+draw = ImageDraw.Draw(image)
 
-# Adjust axes limits and turn off axes
-ax.set_xlim(0, width - 1)
-ax.set_ylim(0, 200)
-ax.axis("off")  # Turn off the axes for a clean graph
+def drawHorizontalLine (y):
+    draw.line([(0, map_value(y)*scaleFacY), (width - 1, map_value(y)*scaleFacY)], fill=(128, 128, 128), width=1)
 
 # Add a horizontal white line in the middle of the image
-ax.axhline(y=map_value(     0), color="white", alpha=0.35, linewidth=1)
+drawHorizontalLine(0)
 lines = [1, 10, 100, 1000, 10000, -1, -10, -100, -1000, -10000]
 for line in lines:
-    ax.axhline(y=map_value(line), color="white", alpha=0.25, linewidth=2.)
+    drawHorizontalLine(line)
 
-# Plot each column of data
+# Draw the graph
 for col_idx, column_data in enumerate(mapped_data):
-    x_coords = range(0, len(column_data)*scaleFacX, scaleFacX)
-    ax.plot(x_coords, column_data, color=colors[col_idx % len(colors)], alpha=0.5, linewidth=1.5*scaleFacX, label=column_names[col_idx])
+    for x in range(1, len(column_data)):
+        # Coordinates of the previous and current points
+        prev_x, prev_y = x, height - column_data[x - 1]*scaleFacY
+        curr_x, curr_y = x, height - column_data[x]*scaleFacY
+        # Draw a line connecting the points
+        draw.line([(prev_x, prev_y), (curr_x, curr_y)], fill=colors[col_idx % len(colors)], width=1)
 
-# Save the graph to an image file
-output_file = file_path+".png"
-plt.savefig(output_file, bbox_inches='tight', pad_inches=0)
-plt.close()
-
+# Save the image
+output_file = file_path+"_.png"
+image.save(output_file)
 print(f"Graph saved as {output_file}")
